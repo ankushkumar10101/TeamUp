@@ -1,0 +1,23 @@
+{
+  "name": "teamup",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TeamUp — Full-Stack Collaborative Task Management System",
+  "scripts": {
+    "start:server": "npm run --prefix server start",
+    "dev:server": "npm run --prefix server dev",
+    "dev:client": "npm run --prefix client dev",
+    "seed": "npm run --prefix server seed",
+    "install:all": "npm install --prefix server && npm install --prefix client"
+  },
+  "keywords": [
+    "mern",
+    "task-management",
+    "system-design",
+    "socketio",
+    "redis",
+    "optimistic-concurrency"
+  ],
+  "author": "",
+  "license": "ISC"
+}
