@@ -19,7 +19,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const clientUrls = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
-  .map((url) => url.trim().replace(/\/$/, ''));
+  .map((url) => url.trim().replace(/\/$/, ''))
+  .filter(Boolean);
 
 const allowedOrigins = Array.from(
   new Set(['http://localhost:5173', 'http://127.0.0.1:5173', ...clientUrls])
@@ -29,12 +30,23 @@ const allowedOrigins = Array.from(
 app.use(
   helmet({
     contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
+
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const normalized = origin.trim().replace(/\/$/, '');
+      if (allowedOrigins.includes(normalized) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS error: Origin ${origin} not allowed.`));
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Requested-With'],
   })
 );
 app.use(express.json());

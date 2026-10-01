@@ -2,7 +2,8 @@ import axios from 'axios';
 
 const getBaseURL = () => {
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    const url = import.meta.env.VITE_API_URL.trim().replace(/\/$/, '');
+    return url.endsWith('/api') ? url : `${url}/api`;
   }
   // In production, default to relative '/api' for unified single-service deployments
   if (import.meta.env.PROD) {
