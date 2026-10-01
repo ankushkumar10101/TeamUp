@@ -17,9 +17,9 @@
     "mern",
     "task-management",
     "system-design",
-    "socketio",
-    "redis",
-    "optimistic-concurrency"
+    "optimistic-concurrency",
+    "rbac",
+    "idempotency"
   ],
   "author": "",
   "license": "ISC"
