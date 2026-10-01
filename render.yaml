@@ -1,0 +1,19 @@
+services:
+  # TeamUp Full-Stack Web Service on Render (Express API + Vite React Frontend)
+  - type: web
+    name: teamup
+    env: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false # Provide your MongoDB Atlas connection string in the Render Dashboard
+      - key: JWT_SECRET
+        generateValue: true # Render automatically generates a secure cryptographic key
+      - key: JWT_EXPIRES_IN
+        value: 7d

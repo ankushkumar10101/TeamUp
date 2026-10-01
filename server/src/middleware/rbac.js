@@ -56,25 +56,7 @@ const checkProjectAccess = async (req, res, next) => {
   }
 };
 
-/**
- * Ensure only ADMIN or MANAGER can assign/reassign a task to someone.
- * If a MEMBER attempts to set or change `assignedTo`, reject with 403.
- */
-const checkTaskAssignmentPermission = (req, res, next) => {
-  if (req.user.role === 'MEMBER') {
-    // If the request body includes assignedTo and it's trying to assign
-    if (req.body.assignedTo !== undefined) {
-      return res.status(403).json({
-        success: false,
-        message: 'Forbidden: Members are not permitted to assign or reassign tasks.',
-      });
-    }
-  }
-  next();
-};
-
 module.exports = {
   authorizeRoles,
   checkProjectAccess,
-  checkTaskAssignmentPermission,
 };

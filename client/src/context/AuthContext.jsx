@@ -36,6 +36,16 @@ export const AuthProvider = ({ children }) => {
     verifyAuth();
   }, [token]);
 
+  // Listen for forced logout events (e.g. Rate Limit Exceeded)
+  useEffect(() => {
+    const handleForceLogout = () => {
+      setUser(null);
+      setToken(null);
+    };
+    window.addEventListener('teamup:logout', handleForceLogout);
+    return () => window.removeEventListener('teamup:logout', handleForceLogout);
+  }, []);
+
   const login = async (email, password) => {
     const res = await authService.login(email, password);
     if (res.success) {

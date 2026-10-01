@@ -2,10 +2,6 @@ const express = require('express');
 const { body } = require('express-validator');
 const taskController = require('../controllers/taskController');
 const { authenticate } = require('../middleware/auth');
-const {
-  authorizeRoles,
-  checkTaskAssignmentPermission,
-} = require('../middleware/rbac');
 const { validate } = require('../middleware/validate');
 
 const router = express.Router();
@@ -41,7 +37,7 @@ router.get('/my-tasks', taskController.getMyDashboardTasks);
 
 // Task details, updates, and deletion
 router.get('/:id', taskController.getTaskById);
-router.put('/:id', checkTaskAssignmentPermission, taskUpdateValidation, taskController.updateTask);
+router.put('/:id', taskUpdateValidation, taskController.updateTask);
 router.delete('/:id', taskController.deleteTask);
 
 module.exports = router;

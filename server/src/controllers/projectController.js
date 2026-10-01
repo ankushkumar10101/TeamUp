@@ -1,5 +1,4 @@
 const projectService = require('../services/projectService');
-const { emitProjectUpdated } = require('../sockets/socketHandler');
 
 const getProjects = async (req, res, next) => {
   try {
@@ -17,6 +16,9 @@ const getProjects = async (req, res, next) => {
 const getProjectById = async (req, res, next) => {
   try {
     const project = await projectService.getProjectById(req.params.id);
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found.' });
+    }
     res.status(200).json({
       success: true,
       data: project,
@@ -41,10 +43,8 @@ const createProject = async (req, res, next) => {
 
 const updateProject = async (req, res, next) => {
   try {
-    const project = await projectService.updateProject(req.params.id, req.body, req.user);
-
-    // Emit real-time project update event
-    emitProjectUpdated(project._id, project);
+    const result = await projectService.updateProject(req.params.id, req.body, req.user);
+    const project = result.project || result;
 
     res.status(200).json({
       success: true,
@@ -80,19 +80,6 @@ const getAllUsers = async (req, res, next) => {
   }
 };
 
-const resetDemoData = async (req, res, next) => {
-  try {
-    const result = await projectService.resetDemoData();
-    res.status(200).json({
-      success: true,
-      message: 'Demo data successfully reset to human-relatable projects.',
-      data: result,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
 module.exports = {
   getProjects,
   getProjectById,
@@ -100,5 +87,4 @@ module.exports = {
   updateProject,
   deleteProject,
   getAllUsers,
-  resetDemoData,
 };

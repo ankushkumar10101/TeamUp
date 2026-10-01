@@ -6,7 +6,6 @@ const { authenticate } = require('../middleware/auth');
 const {
   authorizeRoles,
   checkProjectAccess,
-  checkTaskAssignmentPermission,
 } = require('../middleware/rbac');
 const { idempotency } = require('../middleware/idempotency');
 const { validate } = require('../middleware/validate');
@@ -82,9 +81,6 @@ const taskCreateValidation = [
 // User listing for member pickers
 router.get('/users', projectController.getAllUsers);
 
-// Reset demo data with relatable projects
-router.post('/reset-demo-data', projectController.resetDemoData);
-
 // Project CRUD
 router.get('/', projectController.getProjects);
 router.post('/', authorizeRoles('ADMIN', 'MANAGER'), projectValidation, projectController.createProject);
@@ -94,11 +90,10 @@ router.delete('/:id', checkProjectAccess, projectController.deleteProject);
 
 // Nested Project Tasks Endpoints
 router.get('/:projectId/tasks', checkProjectAccess, taskController.getProjectTasks);
-router.get('/:projectId/tasks/board', checkProjectAccess, taskController.getAllProjectTasks);
 router.post(
   '/:projectId/tasks',
   checkProjectAccess,
-  checkTaskAssignmentPermission,
+  authorizeRoles('ADMIN', 'MANAGER'),
   idempotency,
   taskCreateValidation,
   taskController.createTask

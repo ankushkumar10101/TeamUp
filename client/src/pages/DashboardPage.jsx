@@ -5,7 +5,7 @@ import projectService from '../services/projectService';
 import taskService from '../services/taskService';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
-import { getStatusBadge, getPriorityBadge, formatDate } from '../utils/formatters';
+import { getStatusBadge, getPriorityBadge } from '../utils/formatters';
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -188,19 +188,11 @@ const DashboardPage = () => {
                       <div className="d-flex gap-1 gap-sm-2 flex-shrink-0">
                         <Link
                           to={`/projects/${project._id}`}
-                          className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 p-1 px-2"
-                          title="View Tasks List"
+                          className="btn btn-primary btn-sm d-flex align-items-center gap-1 p-1 px-2"
+                          title="View Project Tasks"
                         >
                           <i className="bi bi-list-task"></i>
-                          <span className="d-none d-sm-inline">Tasks</span>
-                        </Link>
-                        <Link
-                          to={`/projects/${project._id}/board`}
-                          className="btn btn-primary btn-sm d-flex align-items-center gap-1 p-1 px-2"
-                          title="Open Kanban Board"
-                        >
-                          <i className="bi bi-kanban"></i>
-                          <span className="d-none d-sm-inline">Board</span>
+                          <span className="d-none d-sm-inline">View Tasks</span>
                         </Link>
                       </div>
                     </div>

@@ -1,7 +1,6 @@
 const Project = require('../models/Project');
 const Task = require('../models/Task');
 const User = require('../models/User');
-const { invalidateProjectTasks } = require('./cacheService');
 
 /**
  * Fetch projects accessible to the user
@@ -80,6 +79,7 @@ const updateProject = async (projectId, data, user) => {
 
   if (data.name) project.name = data.name;
   if (data.description !== undefined) project.description = data.description;
+  let removedMemberIds = [];
   if (data.members) {
     const members = Array.isArray(data.members) ? [...data.members] : [];
     // Ensure owner stays in members
@@ -90,7 +90,7 @@ const updateProject = async (projectId, data, user) => {
     // Identify removed members
     const oldMemberIds = project.members.map((m) => m.toString());
     const newMemberIdSet = new Set(members.map((m) => m.toString()));
-    const removedMemberIds = oldMemberIds.filter((id) => !newMemberIdSet.has(id));
+    removedMemberIds = oldMemberIds.filter((id) => !newMemberIdSet.has(id));
 
     // If members were removed, unassign their tasks in this project
     if (removedMemberIds.length > 0) {
@@ -98,14 +98,14 @@ const updateProject = async (projectId, data, user) => {
         { project: projectId, assignedTo: { $in: removedMemberIds } },
         { $set: { assignedTo: null } }
       );
-      await invalidateProjectTasks(projectId);
     }
 
     project.members = members;
   }
 
   await project.save();
-  return getProjectById(projectId);
+  const updatedProject = await getProjectById(projectId);
+  return { project: updatedProject, removedMemberIds };
 };
 
 /**
@@ -119,10 +119,11 @@ const deleteProject = async (projectId, user) => {
     throw error;
   }
 
-  // RBAC: ADMIN, MANAGER, or Project Owner can delete projects
+  // RBAC: Only project creator or ADMIN can delete projects
   const isOwner = project.owner && project.owner.toString() === user._id.toString();
-  if (user.role !== 'ADMIN' && user.role !== 'MANAGER' && !isOwner) {
-    const error = new Error('Forbidden: Only an Admin, Manager, or the project owner can delete this project.');
+  const isAdmin = user && user.role === 'ADMIN';
+  if (!isOwner && !isAdmin) {
+    const error = new Error('Forbidden: Only the project creator or an administrator can delete this project.');
     error.statusCode = 403;
     throw error;
   }
@@ -132,9 +133,6 @@ const deleteProject = async (projectId, user) => {
 
   // Cascade delete all tasks belonging to this project
   await Task.deleteMany({ project: projectId });
-
-  // Invalidate Redis task cache
-  await invalidateProjectTasks(projectId);
 
   return { message: 'Project and all associated tasks successfully deleted.' };
 };
@@ -146,60 +144,6 @@ const getAllUsers = async () => {
   return User.find().select('name email role').sort({ name: 1 });
 };
 
-/**
- * Reset all projects and tasks with relatable, real-world demo data
- */
-const resetDemoData = async () => {
-  const { seedProjects, getSeedTasks, seedUsers } = require('../utils/seedData');
-
-  let users = await User.find();
-  if (users.length === 0) {
-    users = await User.create(seedUsers);
-  }
-
-  const userMap = {};
-  users.forEach((u) => {
-    userMap[u.email] = u._id;
-  });
-
-  await Task.deleteMany({});
-  await Project.deleteMany({});
-
-  const allMembers = Object.values(userMap);
-
-  const project1 = await Project.create({
-    ...seedProjects[0],
-    owner: userMap['manager@teamup.dev'] || users[0]._id,
-    members: allMembers,
-  });
-
-  const project2 = await Project.create({
-    ...seedProjects[1],
-    owner: userMap['admin@teamup.dev'] || users[0]._id,
-    members: allMembers,
-  });
-
-  const project3 = await Project.create({
-    ...seedProjects[2],
-    owner: userMap['manager@teamup.dev'] || users[0]._id,
-    members: allMembers,
-  });
-
-  const project4 = await Project.create({
-    ...seedProjects[3],
-    owner: userMap['admin@teamup.dev'] || users[0]._id,
-    members: allMembers,
-  });
-
-  const tasksData = getSeedTasks(project1._id, project2._id, project3._id, project4._id, userMap);
-  await Task.create(tasksData);
-
-  return {
-    projectCount: 4,
-    taskCount: tasksData.length,
-  };
-};
-
 module.exports = {
   getProjects,
   getProjectById,
@@ -207,5 +151,4 @@ module.exports = {
   updateProject,
   deleteProject,
   getAllUsers,
-  resetDemoData,
 };

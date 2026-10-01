@@ -1,6 +1,4 @@
-const { safeRedis } = require('../config/redis');
-
-// In-memory fallback if Redis is temporarily offline
+// In-memory idempotency store with automatic TTL cleanup
 const memoryStore = new Map();
 
 /**
@@ -19,16 +17,7 @@ const idempotency = async (req, res, next) => {
   const cacheKey = `idempotency:${userId}:${idempotencyKey}`;
 
   try {
-    let cachedRecord = null;
-
-    if (safeRedis.isAvailable()) {
-      const data = await safeRedis.get(cacheKey);
-      if (data) {
-        cachedRecord = JSON.parse(data);
-      }
-    } else {
-      cachedRecord = memoryStore.get(cacheKey);
-    }
+    const cachedRecord = memoryStore.get(cacheKey);
 
     if (cachedRecord) {
       console.log(`[Idempotency] Duplicate request detected for key: ${idempotencyKey}. Serving cached response.`);
@@ -47,16 +36,9 @@ const idempotency = async (req, res, next) => {
           body,
         };
 
-        if (safeRedis.isAvailable()) {
-          // Cache with 1-hour expiration
-          safeRedis.set(cacheKey, JSON.stringify(record), 'EX', 3600).catch((err) => {
-            console.warn(`[Idempotency] Failed to cache record: ${err.message}`);
-          });
-        } else {
-          memoryStore.set(cacheKey, record);
-          // Set timeout to clear memory store
-          setTimeout(() => memoryStore.delete(cacheKey), 3600 * 1000);
-        }
+        memoryStore.set(cacheKey, record);
+        // Set timeout to clear memory store after 1 hour
+        setTimeout(() => memoryStore.delete(cacheKey), 3600 * 1000);
       }
 
       return originalJson(body);
@@ -65,7 +47,6 @@ const idempotency = async (req, res, next) => {
     next();
   } catch (err) {
     console.warn(`[Idempotency] Error processing idempotency key: ${err.message}`);
-    // Do not block client request if idempotency check encounters an unexpected error
     next();
   }
 };

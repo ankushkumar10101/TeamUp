@@ -16,11 +16,6 @@ export const projectService = {
     return res.data;
   },
 
-  updateProject: async (id, data) => {
-    const res = await api.put(`/projects/${id}`, data);
-    return res.data;
-  },
-
   deleteProject: async (id) => {
     const res = await api.delete(`/projects/${id}`);
     return res.data;

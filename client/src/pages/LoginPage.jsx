@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ErrorMessage from '../components/ErrorMessage';
 
 const LoginPage = () => {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(() => searchParams.get('error') || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login } = useAuth();

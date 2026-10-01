@@ -39,10 +39,10 @@ export const getRoleBadge = (role) => {
     case 'ADMIN':
       return { label: 'Admin', className: 'bg-dark text-white' };
     case 'MANAGER':
-      return { label: 'Manager', className: 'bg-primary' };
+      return { label: 'Manager', className: 'bg-primary text-white' };
     case 'MEMBER':
-      return { label: 'Member', className: 'bg-secondary' };
+      return { label: 'Member', className: 'bg-secondary text-white' };
     default:
-      return { label: role || 'User', className: 'bg-light text-dark' };
+      return { label: role || 'User', className: 'bg-secondary text-white' };
   }
 };

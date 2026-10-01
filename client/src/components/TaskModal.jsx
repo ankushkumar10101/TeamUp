@@ -10,10 +10,11 @@ const TaskModal = ({
   members = [],
   conflictError = null,
   onReloadTask = null,
+  isOwner = false,
 }) => {
   const { user } = useAuth();
   const isEditing = Boolean(initialData?._id);
-  const canAssign = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  const canAssign = user?.role === 'ADMIN' || user?.role === 'MANAGER' || isOwner;
   const isCreator = !isEditing || (initialData?.createdBy?._id || initialData?.createdBy)?.toString() === user?._id?.toString();
   const canEditDetails = user?.role === 'ADMIN' || user?.role === 'MANAGER' || isCreator;
 
@@ -30,7 +31,7 @@ const TaskModal = ({
   const [workspaceUsers, setWorkspaceUsers] = useState([]);
 
   useEffect(() => {
-    if (isOpen && canAssign) {
+    if (isOpen && canAssign && workspaceUsers.length === 0) {
       projectService
         .getUsers()
         .then((res) => {
@@ -42,7 +43,7 @@ const TaskModal = ({
           console.warn('Failed to load workspace users:', err.message);
         });
     }
-  }, [isOpen, canAssign]);
+  }, [isOpen, canAssign, workspaceUsers.length]);
 
   // Combine project members and all workspace users without duplicates
   const userMap = new Map();

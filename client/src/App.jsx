@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { SocketProvider } from './context/SocketContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -12,7 +11,6 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
-import ProjectBoardPage from './pages/ProjectBoardPage';
 
 // Authenticated Layout Wrapper
 const AppLayout = ({ children }) => {
@@ -49,59 +47,47 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <SocketProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-            {/* Protected Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <DashboardPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <ProjectsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects/:id"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <ProjectDetailPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects/:id/board"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <ProjectBoardPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <DashboardPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ProjectsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ProjectDetailPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Fallback & Redirects */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </SocketProvider>
+          {/* Fallback & Redirects */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </AuthProvider>
     </BrowserRouter>
   );

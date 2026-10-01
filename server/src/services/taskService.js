@@ -1,30 +1,14 @@
 const Task = require('../models/Task');
 const Project = require('../models/Project');
-const {
-  buildTaskCacheKey,
-  getCachedData,
-  setCachedData,
-  invalidateProjectTasks,
-} = require('./cacheService');
 
 /**
- * Fetch paginated tasks for a project with caching and filtering
+ * Fetch paginated tasks for a project with filtering
  */
 const getProjectTasks = async (projectId, query = {}) => {
   const page = parseInt(query.page, 10) || 1;
   const limit = parseInt(query.limit, 10) || 20;
   const skip = (page - 1) * limit;
 
-  // Build cache key based on query filters
-  const cacheKey = buildTaskCacheKey(projectId, query);
-
-  // 1. Try Redis cache first (Cache-Aside Pattern)
-  const cached = await getCachedData(cacheKey);
-  if (cached) {
-    return { ...cached, cached: true };
-  }
-
-  // 2. Cache Miss: Query MongoDB
   const filter = { project: projectId };
 
   if (query.status && ['TODO', 'IN_PROGRESS', 'DONE'].includes(query.status)) {
@@ -49,7 +33,7 @@ const getProjectTasks = async (projectId, query = {}) => {
 
   const totalPages = Math.ceil(total / limit) || 1;
 
-  const result = {
+  return {
     success: true,
     data: tasks,
     pagination: {
@@ -58,38 +42,7 @@ const getProjectTasks = async (projectId, query = {}) => {
       total,
       totalPages,
     },
-    cached: false,
   };
-
-  // 3. Store result in Redis cache with TTL (120s)
-  await setCachedData(cacheKey, result);
-
-  return result;
-};
-
-/**
- * Fetch all tasks for a project (useful for Kanban board view)
- */
-const getAllProjectTasks = async (projectId) => {
-  const cacheKey = `project:${projectId}:tasks:board`;
-  const cached = await getCachedData(cacheKey);
-  if (cached) {
-    return { ...cached, cached: true };
-  }
-
-  const tasks = await Task.find({ project: projectId })
-    .populate('assignedTo', 'name email role')
-    .populate('createdBy', 'name email role')
-    .sort({ createdAt: -1 });
-
-  const result = {
-    success: true,
-    data: tasks,
-    cached: false,
-  };
-
-  await setCachedData(cacheKey, result, 60);
-  return result;
 };
 
 /**
@@ -110,6 +63,33 @@ const getTaskById = async (taskId) => {
 };
 
 /**
+ * Automatically synchronize project members from assigned tasks:
+ * - Members = Project Owner + Any user currently assigned to at least 1 task in the project.
+ * - If a user has no assigned tasks (and is not the owner), they are removed from project.members.
+ */
+const syncProjectMembers = async (projectId) => {
+  const project = await Project.findById(projectId);
+  if (!project) return;
+
+  // Find all users who are currently assigned to at least 1 task in this project
+  const assignedUsers = await Task.distinct('assignedTo', {
+    project: projectId,
+    assignedTo: { $ne: null },
+  });
+
+  const memberSet = new Set(assignedUsers.map((id) => id.toString()));
+  // The owner is always a member
+  if (project.owner) {
+    memberSet.add((project.owner._id || project.owner).toString());
+  }
+
+  const newMemberList = Array.from(memberSet);
+
+  project.members = newMemberList;
+  await project.save();
+};
+
+/**
  * Create a new task within a project
  */
 const createTask = async (projectId, data, user) => {
@@ -125,15 +105,8 @@ const createTask = async (projectId, data, user) => {
     version: 1,
   });
 
-  // If task is assigned, ensure the assignee is included in the project's members
-  if (data.assignedTo) {
-    await Project.findByIdAndUpdate(projectId, {
-      $addToSet: { members: data.assignedTo },
-    });
-  }
-
-  // Invalidate Redis task cache for this project
-  await invalidateProjectTasks(projectId);
+  // Automatically synchronize project members from task assignments
+  await syncProjectMembers(projectId);
 
   return getTaskById(task._id);
 };
@@ -199,36 +172,10 @@ const updateTask = async (taskId, updateData, user) => {
   if (updateData.priority !== undefined) existingTask.priority = updateData.priority;
   if (updateData.dueDate !== undefined) existingTask.dueDate = updateData.dueDate;
 
-  // Assignment update (RBAC is checked by middleware, but also verified here)
-  if (updateData.assignedTo !== undefined) {
-    const oldAssignee = existingTask.assignedTo ? existingTask.assignedTo.toString() : null;
-    const newAssignee = updateData.assignedTo ? updateData.assignedTo.toString() : null;
-
+  // Assignment update
+  const assignmentChanged = updateData.assignedTo !== undefined;
+  if (assignmentChanged) {
     existingTask.assignedTo = updateData.assignedTo || null;
-
-    if (newAssignee) {
-      await Project.findByIdAndUpdate(existingTask.project, {
-        $addToSet: { members: updateData.assignedTo },
-      });
-    }
-
-    // If an assignee was removed or changed, check if oldAssignee should be removed from project members
-    if (oldAssignee && oldAssignee !== newAssignee) {
-      const project = await Project.findById(existingTask.project);
-      const isOwner = project && (project.owner?._id || project.owner)?.toString() === oldAssignee;
-      if (!isOwner) {
-        const remainingTasks = await Task.countDocuments({
-          project: existingTask.project,
-          assignedTo: oldAssignee,
-          _id: { $ne: existingTask._id },
-        });
-        if (remainingTasks === 0) {
-          await Project.findByIdAndUpdate(existingTask.project, {
-            $pull: { members: oldAssignee },
-          });
-        }
-      }
-    }
   }
 
   // Increment version on successful update
@@ -236,8 +183,10 @@ const updateTask = async (taskId, updateData, user) => {
 
   await existingTask.save();
 
-  // Invalidate cache for the project
-  await invalidateProjectTasks(existingTask.project);
+  // If task assignment was changed, sync project members
+  if (assignmentChanged) {
+    await syncProjectMembers(existingTask.project);
+  }
 
   return getTaskById(taskId);
 };
@@ -254,36 +203,17 @@ const deleteTask = async (taskId) => {
   }
 
   const projectId = task.project;
-  const assignedTo = task.assignedTo ? task.assignedTo.toString() : null;
 
   await Task.findByIdAndDelete(taskId);
 
-  // If the deleted task was assigned, check if assignee should be removed from project members
-  if (assignedTo) {
-    const project = await Project.findById(projectId);
-    const isOwner = project && (project.owner?._id || project.owner)?.toString() === assignedTo;
-    if (!isOwner) {
-      const remainingTasks = await Task.countDocuments({
-        project: projectId,
-        assignedTo,
-      });
-      if (remainingTasks === 0) {
-        await Project.findByIdAndUpdate(projectId, {
-          $pull: { members: assignedTo },
-        });
-      }
-    }
-  }
-
-  // Invalidate cache for the project
-  await invalidateProjectTasks(projectId);
+  // Synchronize project members (removes members if they have no remaining tasks)
+  await syncProjectMembers(projectId);
 
   return { message: 'Task successfully deleted.' };
 };
 
 module.exports = {
   getProjectTasks,
-  getAllProjectTasks,
   getTaskById,
   createTask,
   updateTask,

@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 
 const ProjectCard = ({ project, onDelete }) => {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  const isCreator = Boolean(user && project && (project.owner?._id || project.owner)?.toString() === user._id?.toString());
+  const canDelete = Boolean(user && (user.role === 'ADMIN' || isCreator));
 
   // Get first 3 members for avatar stack
   const previewMembers = project.members ? project.members.slice(0, 4) : [];
@@ -26,7 +27,7 @@ const ProjectCard = ({ project, onDelete }) => {
             </div>
           </div>
 
-          {onDelete && (
+          {canDelete && onDelete && (
             <button
               className="btn btn-outline-danger btn-sm p-1 lh-1 rounded-circle"
               style={{ width: '28px', height: '28px' }}
@@ -79,12 +80,9 @@ const ProjectCard = ({ project, onDelete }) => {
           </div>
         </div>
 
-        <div className="d-flex gap-2">
-          <Link to={`/projects/${project._id}`} className="btn btn-outline-secondary btn-sm flex-fill">
-            <i className="bi bi-list-task me-1"></i> Tasks
-          </Link>
-          <Link to={`/projects/${project._id}/board`} className="btn btn-primary btn-sm flex-fill">
-            <i className="bi bi-kanban me-1"></i> Board
+        <div className="d-flex">
+          <Link to={`/projects/${project._id}`} className="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1">
+            <i className="bi bi-list-task me-1"></i> View Tasks
           </Link>
         </div>
       </div>

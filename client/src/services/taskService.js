@@ -6,11 +6,6 @@ export const taskService = {
     return res.data;
   },
 
-  getAllProjectTasks: async (projectId) => {
-    const res = await api.get(`/projects/${projectId}/tasks/board`);
-    return res.data;
-  },
-
   getTask: async (id) => {
     const res = await api.get(`/tasks/${id}`);
     return res.data;

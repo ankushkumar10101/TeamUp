@@ -1,24 +1,10 @@
 const taskService = require('../services/taskService');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
-const {
-  emitTaskCreated,
-  emitTaskUpdated,
-  emitTaskDeleted,
-} = require('../sockets/socketHandler');
 
 const getProjectTasks = async (req, res, next) => {
   try {
     const result = await taskService.getProjectTasks(req.params.projectId, req.query);
-    res.status(200).json(result);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const getAllProjectTasks = async (req, res, next) => {
-  try {
-    const result = await taskService.getAllProjectTasks(req.params.projectId);
     res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -41,9 +27,6 @@ const createTask = async (req, res, next) => {
   try {
     const task = await taskService.createTask(req.params.projectId, req.body, req.user);
 
-    // Emit real-time Socket event to all project members
-    emitTaskCreated(req.params.projectId, task);
-
     res.status(201).json({
       success: true,
       message: 'Task created successfully.',
@@ -57,9 +40,6 @@ const createTask = async (req, res, next) => {
 const updateTask = async (req, res, next) => {
   try {
     const task = await taskService.updateTask(req.params.id, req.body, req.user);
-
-    // Emit real-time Socket event to all project members
-    emitTaskUpdated(task.project._id || task.project, task);
 
     res.status(200).json({
       success: true,
@@ -93,9 +73,6 @@ const deleteTask = async (req, res, next) => {
     }
 
     const result = await taskService.deleteTask(req.params.id);
-
-    // Emit real-time Socket event to all project members
-    emitTaskDeleted(projectId, req.params.id);
 
     res.status(200).json({
       success: true,
@@ -142,7 +119,6 @@ const getMyDashboardTasks = async (req, res, next) => {
 
 module.exports = {
   getProjectTasks,
-  getAllProjectTasks,
   getTaskById,
   createTask,
   updateTask,

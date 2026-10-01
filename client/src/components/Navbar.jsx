@@ -1,12 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useSocket } from '../context/SocketContext';
 import { getRoleBadge } from '../utils/formatters';
 
 const Navbar = ({ isMobileSidebarOpen, onToggleSidebar }) => {
   const { user, logout } = useAuth();
-  const { isConnected } = useSocket();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -53,8 +51,10 @@ const Navbar = ({ isMobileSidebarOpen, onToggleSidebar }) => {
               <div className="fw-bold small text-dark text-truncate" style={{ maxWidth: '120px' }}>
                 {user.name}
               </div>
-              <div className="text-muted" style={{ fontSize: '0.72rem' }}>
-                <span className={`badge ${roleInfo.className} py-0 px-1 occ-badge`}>{roleInfo.label}</span>
+              <div className="mt-1">
+                <span className={`badge ${roleInfo.className} rounded-pill px-2 py-0.5 fw-semibold`} style={{ fontSize: '0.68rem', letterSpacing: '0.02em' }}>
+                  {roleInfo.label}
+                </span>
               </div>
             </div>
           </div>

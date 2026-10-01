@@ -37,7 +37,8 @@ const login = async (req, res, next) => {
 };
 
 const logout = async (req, res) => {
-  res.clearCookie('token', authService.getCookieOptions());
+  const { maxAge, ...cookieOptions } = authService.getCookieOptions();
+  res.clearCookie('token', cookieOptions);
   res.status(200).json({
     success: true,
     message: 'Logged out successfully.',

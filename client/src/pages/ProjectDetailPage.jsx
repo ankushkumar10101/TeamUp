@@ -18,9 +18,9 @@ const ProjectDetailPage = () => {
   const [tasks, setTasks] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [filters, setFilters] = useState({ status: '', priority: '' });
-  const [isCached, setIsCached] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [accessRevoked, setAccessRevoked] = useState(false);
 
   // Modal and Concurrency States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,11 +37,22 @@ const ProjectDetailPage = () => {
       const res = await projectService.getProject(projectId);
       if (res.success) {
         setProject(res.data);
+        const isOwner = (res.data.owner?._id || res.data.owner)?.toString() === user?._id?.toString();
+        const isMember = res.data.members?.some((m) => (m._id || m)?.toString() === user?._id?.toString());
+        if (!isOwner && !isMember && user?.role !== 'ADMIN') {
+          setAccessRevoked(true);
+          setTasks([]);
+        }
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to load project details.');
+      if (err.response?.status === 403) {
+        setAccessRevoked(true);
+        setTasks([]);
+      } else {
+        setError(err.response?.data?.message || err.message || 'Failed to load project details.');
+      }
     }
-  }, [projectId]);
+  }, [projectId, user]);
 
   const fetchTasks = useCallback(async (page = 1) => {
     try {
@@ -58,7 +69,6 @@ const ProjectDetailPage = () => {
       if (res.success) {
         setTasks(res.data);
         setPagination(res.pagination);
-        setIsCached(Boolean(res.cached));
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to load project tasks.');
@@ -72,8 +82,10 @@ const ProjectDetailPage = () => {
   }, [fetchProjectDetails]);
 
   useEffect(() => {
-    fetchTasks(1);
-  }, [fetchTasks]);
+    if (!accessRevoked) {
+      fetchTasks(1);
+    }
+  }, [fetchTasks, accessRevoked]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -161,6 +173,25 @@ const ProjectDetailPage = () => {
     }
   };
 
+  if (accessRevoked) {
+    return (
+      <div className="card text-center p-5 border-0 shadow-sm my-4" style={{ borderRadius: '16px' }}>
+        <div className="icon-circle icon-circle-indigo mx-auto mb-3" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
+          <i className="bi bi-shield-lock"></i>
+        </div>
+        <h4 className="fw-bold text-dark">Access Revoked</h4>
+        <p className="text-muted small mb-4">
+          You have been removed from this project workspace. You no longer have access to view or update tasks here.
+        </p>
+        <div>
+          <Link to="/projects" className="btn btn-primary px-4">
+            Back to Projects
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!project && loading) {
     return <LoadingSpinner message="Loading project workspace..." />;
   }
@@ -173,7 +204,7 @@ const ProjectDetailPage = () => {
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div className="d-flex align-items-center gap-3">
               <div className="icon-circle icon-circle-indigo" style={{ width: '52px', height: '52px', fontSize: '1.5rem' }}>
-                <i className="bi bi-kanban"></i>
+                <i className="bi bi-folder2-open"></i>
               </div>
               <div>
                 <div className="d-flex align-items-center gap-2 mb-1">
@@ -196,11 +227,6 @@ const ProjectDetailPage = () => {
                 <i className="bi bi-people-fill text-primary"></i>
                 <span>Members ({project?.members?.length || 0})</span>
               </button>
-
-              <Link to={`/projects/${projectId}/board`} className="btn btn-primary btn-sm d-flex align-items-center gap-2">
-                <i className="bi bi-kanban"></i>
-                <span>Open Kanban Board</span>
-              </Link>
               {canDeleteProject && (
                 <button
                   type="button"
@@ -219,21 +245,24 @@ const ProjectDetailPage = () => {
 
       <ErrorMessage message={error} onDismiss={() => setError(null)} onRetry={() => fetchTasks(pagination.page)} />
 
-      {/* Task Filters & Cache Status */}
+      {/* Task Filters */}
       <div className="card mb-4">
         <div className="card-body p-3">
           <div className="row g-2 align-items-center">
-            <div className="col-12 col-sm-auto">
-              <button className="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1" onClick={handleOpenCreateModal}>
-                <i className="bi bi-plus-lg"></i>
-                <span>Add Task</span>
-              </button>
-            </div>
+            {user?.role !== 'MEMBER' && (
+              <div className="col-12 col-sm-auto">
+                <button className="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1" onClick={handleOpenCreateModal}>
+                  <i className="bi bi-plus-lg"></i>
+                  <span>Add Task</span>
+                </button>
+              </div>
+            )}
 
             <div className="col-6 col-sm-auto">
               <select
                 name="status"
                 className="form-select form-select-sm"
+                style={{ minWidth: '140px' }}
                 value={filters.status}
                 onChange={handleFilterChange}
               >
@@ -248,6 +277,7 @@ const ProjectDetailPage = () => {
               <select
                 name="priority"
                 className="form-select form-select-sm"
+                style={{ minWidth: '140px' }}
                 value={filters.priority}
                 onChange={handleFilterChange}
               >
@@ -256,17 +286,6 @@ const ProjectDetailPage = () => {
                 <option value="MEDIUM">Medium</option>
                 <option value="HIGH">High</option>
               </select>
-            </div>
-
-            <div className="col-12 col-sm-auto ms-sm-auto d-flex align-items-center justify-content-end gap-2 mt-1 mt-sm-0">
-              <button
-                className="btn btn-outline-secondary btn-sm rounded-circle p-1"
-                style={{ width: '32px', height: '32px' }}
-                title="Refresh Tasks"
-                onClick={() => fetchTasks(pagination.page)}
-              >
-                <i className="bi bi-arrow-clockwise"></i>
-              </button>
             </div>
           </div>
         </div>
@@ -325,16 +344,14 @@ const ProjectDetailPage = () => {
                           )}
                         </td>
                         <td>
-                          <span className={`badge badge-pill-soft ${
-                            task.status === 'DONE' ? 'badge-done' : task.status === 'IN_PROGRESS' ? 'badge-inprogress' : 'badge-todo'
-                          }`}>
+                          <span className={`badge badge-pill-soft ${task.status === 'DONE' ? 'badge-done' : task.status === 'IN_PROGRESS' ? 'badge-inprogress' : 'badge-todo'
+                            }`}>
                             {statusBadge.label}
                           </span>
                         </td>
                         <td>
-                          <span className={`badge badge-pill-soft ${
-                            task.priority === 'HIGH' ? 'badge-high' : task.priority === 'MEDIUM' ? 'badge-medium' : 'badge-low'
-                          }`}>
+                          <span className={`badge badge-pill-soft ${task.priority === 'HIGH' ? 'badge-high' : task.priority === 'MEDIUM' ? 'badge-medium' : 'badge-low'
+                            }`}>
                             {priorityBadge.label}
                           </span>
                         </td>
@@ -424,6 +441,7 @@ const ProjectDetailPage = () => {
         members={project?.members || []}
         conflictError={conflictError}
         onReloadTask={handleReloadTask}
+        isOwner={isOwner}
       />
 
       {/* Project Members Modal */}
@@ -431,10 +449,6 @@ const ProjectDetailPage = () => {
         isOpen={isMembersModalOpen}
         onClose={() => setIsMembersModalOpen(false)}
         project={project}
-        onProjectUpdated={(updatedProject) => {
-          setProject(updatedProject);
-          fetchTasks(pagination.page);
-        }}
       />
     </div>
   );
