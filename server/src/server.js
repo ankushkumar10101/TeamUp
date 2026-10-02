@@ -1,20 +1,32 @@
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+const dotenv = require('dotenv');
+
+// Robust dotenv loading: check server/.env, process.cwd()/.env, and project root
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
+dotenv.config();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const { connectDB } = require('./config/db');
-const { apiLimiter } = require('./middleware/rateLimiter');
+const { apiLimiter, rateLimitConfig } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
-
-const path = require('path');
-const fs = require('fs');
 
 const authRoutes = require('./routes/authRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 
 const app = express();
+
+// Trust proxy if configured or in production (essential for rate limiting behind reverse proxies)
+if (process.env.TRUST_PROXY || process.env.NODE_ENV === 'production') {
+  const trustProxyVal = process.env.TRUST_PROXY;
+  app.set('trust proxy', trustProxyVal ? (Number.isNaN(Number(trustProxyVal)) ? trustProxyVal : Number(trustProxyVal)) : 1);
+}
 
 const PORT = process.env.PORT || 5000;
 const clientUrls = (process.env.CLIENT_URL || 'http://localhost:5173')
@@ -95,6 +107,11 @@ const startServer = async () => {
   await connectDB();
   app.listen(PORT, () => {
     console.log(`[TeamUp Server] Running on http://localhost:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    if (rateLimitConfig.enabled) {
+      console.log(`[RateLimit] Status: Enabled | API: ${rateLimitConfig.api.max} reqs / ${rateLimitConfig.api.windowMin}m | Auth: ${rateLimitConfig.auth.max} reqs / ${rateLimitConfig.auth.windowMin}m`);
+    } else {
+      console.log('[RateLimit] Status: Disabled (RATE_LIMIT_ENABLED=false)');
+    }
   });
 };
 

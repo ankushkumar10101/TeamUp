@@ -48,6 +48,13 @@ MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
+
+# Optional Rate Limiting Configurations
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_MAX=1000
+RATE_LIMIT_WINDOW_MIN=15
+RATE_LIMIT_AUTH_MAX=20
+RATE_LIMIT_AUTH_WINDOW_MIN=15
 ```
 
 *(Optional)* Seed demo accounts and sample projects:
