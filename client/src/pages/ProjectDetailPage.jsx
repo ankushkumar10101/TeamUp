@@ -202,15 +202,15 @@ const ProjectDetailPage = () => {
       {/* Project Overview Header */}
       <div className="card mb-4">
         <div className="card-body p-4">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-            <div className="d-flex align-items-center gap-3">
-              <div className="icon-circle icon-circle-indigo" style={{ width: '52px', height: '52px', fontSize: '1.5rem' }}>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div className="d-flex align-items-center gap-3 flex-grow-1 me-md-3">
+              <div className="icon-circle icon-circle-indigo flex-shrink-0" style={{ width: '52px', height: '52px', fontSize: '1.5rem' }}>
                 <i className="bi bi-folder2-open"></i>
               </div>
-              <div>
-                <div className="d-flex align-items-center gap-2 mb-1">
-                  <h3 className="fw-bold mb-0 text-dark">{project?.name}</h3>
-                  <span className="badge rounded-pill bg-light text-secondary border small">
+              <div style={{ minWidth: 0 }}>
+                <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="fw-bold mb-0 text-dark text-truncate">{project?.name}</h3>
+                  <span className="badge rounded-pill bg-light text-secondary border small flex-shrink-0">
                     {project?.members?.length || 0} members
                   </span>
                 </div>
@@ -218,10 +218,10 @@ const ProjectDetailPage = () => {
               </div>
             </div>
 
-            <div className="d-flex flex-wrap gap-2">
+            <div className="d-flex align-items-center gap-2 flex-nowrap flex-shrink-0">
               <button
                 type="button"
-                className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 text-nowrap"
                 onClick={() => setIsMembersModalOpen(true)}
                 title="Manage project members"
               >
@@ -231,7 +231,7 @@ const ProjectDetailPage = () => {
               {canDeleteProject && (
                 <button
                   type="button"
-                  className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
+                  className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 text-nowrap"
                   onClick={handleDeleteCurrentProject}
                   title="Delete this project"
                 >
