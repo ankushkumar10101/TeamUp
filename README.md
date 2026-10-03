@@ -8,7 +8,6 @@ A full-stack MERN (MongoDB, Express, React, Node.js) application for collaborati
 - **Project Workspaces**: Create, manage, and collaborate on projects with role-based member access.
 - **Task Management**: Create, assign, and organize tasks across Todo, In Progress, and Done with priorities and due dates.
 - **Concurrency Control**: Optimistic Concurrency Control (OCC) prevents lost updates and alerts users when tasks are edited concurrently.
-- **Idempotency Protection**: In-memory idempotency key support prevents duplicate task creation during network retries.
 - **User Authentication & RBAC**: Secure JWT-based auth with role-based permissions (Admin, Manager, Member).
 - **Responsive UI**: Clean, mobile-friendly interface built with Bootstrap 5 and Bootstrap Icons.
 
@@ -101,3 +100,4 @@ If you ran `npm run seed`, you can log in with any of these accounts (password: 
 3. Add tasks, set priority levels (Low, Medium, High), and assign them to members.
 4. Update task progress from **TODO** to **IN_PROGRESS** and **DONE**.
 5. Check your personal **Dashboard** to monitor your workload and completion rate.
+

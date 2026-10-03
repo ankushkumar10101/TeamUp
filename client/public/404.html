@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TeamUp — Redirecting...</title>
+    <script>
+      // Single Page Application redirect handler for static hosts
+      try {
+        sessionStorage.setItem('teamup_spa_redirect', window.location.href);
+      } catch (e) {}
+      window.location.replace('/');
+    </script>
+    <meta http-equiv="refresh" content="0;URL='/'" />
+  </head>
+  <body style="font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f8fafc; color: #334155;">
+    <div style="text-align: center; padding: 2rem;">
+      <h3 style="margin-bottom: 0.5rem; font-weight: 600;">Loading TeamUp...</h3>
+      <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Redirecting to your page...</p>
+    </div>
+  </body>
+</html>

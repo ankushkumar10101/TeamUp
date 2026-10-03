@@ -29,6 +29,7 @@ const TaskModal = ({
 
   const [formErrors, setFormErrors] = useState({});
   const [workspaceUsers, setWorkspaceUsers] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen && canAssign && workspaceUsers.length === 0) {
@@ -76,6 +77,7 @@ const TaskModal = ({
       });
     }
     setFormErrors({});
+    setSubmitting(false);
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
@@ -98,8 +100,10 @@ const TaskModal = ({
     return errors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+
     const errors = validate();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -132,12 +136,14 @@ const TaskModal = ({
       }
     }
 
-    // Automatically generate an Idempotency-Key behind the scenes for duplicate protection
-    const idempotencyKey = !isEditing
-      ? `task-create-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-      : null;
-
-    onSubmit(payload, idempotencyKey);
+    try {
+      setSubmitting(true);
+      await onSubmit(payload);
+    } catch (err) {
+      // Re-enable button on error
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -148,7 +154,7 @@ const TaskModal = ({
             <h5 className="modal-title fw-semibold">
               {isEditing ? `Edit Task (v${initialData.version})` : 'Create New Task'}
             </h5>
-            <button type="button" className="btn-close" aria-label="Close" onClick={onClose}></button>
+            <button type="button" className="btn-close" aria-label="Close" onClick={onClose} disabled={submitting}></button>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -267,11 +273,22 @@ const TaskModal = ({
             </div>
 
             <div className="modal-footer bg-light">
-              <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={onClose} disabled={submitting}>
                 Cancel
               </button>
-              <button type="submit" className="btn btn-primary btn-sm">
-                {isEditing ? 'Save Changes' : 'Create Task'}
+              <button
+                type="submit"
+                className="btn btn-primary btn-sm d-flex align-items-center gap-1"
+                disabled={submitting}
+              >
+                {submitting && (
+                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                )}
+                <span>
+                  {isEditing
+                    ? (submitting ? 'Saving...' : 'Save Changes')
+                    : (submitting ? 'Creating Task...' : 'Create Task')}
+                </span>
               </button>
             </div>
           </form>

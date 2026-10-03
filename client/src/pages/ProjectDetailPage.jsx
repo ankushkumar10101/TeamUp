@@ -116,7 +116,7 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleModalSubmit = async (taskData, idempotencyKey) => {
+  const handleModalSubmit = async (taskData) => {
     try {
       if (editingTask) {
         const res = await taskService.updateTask(editingTask._id, taskData);
@@ -130,7 +130,7 @@ const ProjectDetailPage = () => {
           });
         }
       } else {
-        const res = await taskService.createTask(projectId, taskData, idempotencyKey);
+        const res = await taskService.createTask(projectId, taskData);
         if (res.success) {
           setIsModalOpen(false);
           fetchTasks(1);
@@ -145,6 +145,7 @@ const ProjectDetailPage = () => {
       } else {
         alert(err.response?.data?.message || err.message || 'Action failed.');
       }
+      throw err;
     }
   };
 

@@ -11,12 +11,8 @@ export const taskService = {
     return res.data;
   },
 
-  createTask: async (projectId, taskData, idempotencyKey = null) => {
-    const headers = {};
-    if (idempotencyKey) {
-      headers['Idempotency-Key'] = idempotencyKey;
-    }
-    const res = await api.post(`/projects/${projectId}/tasks`, taskData, { headers });
+  createTask: async (projectId, taskData) => {
+    const res = await api.post(`/projects/${projectId}/tasks`, taskData);
     return res.data;
   },
 

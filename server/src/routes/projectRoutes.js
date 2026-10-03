@@ -7,7 +7,6 @@ const {
   authorizeRoles,
   checkProjectAccess,
 } = require('../middleware/rbac');
-const { idempotency } = require('../middleware/idempotency');
 const { validate } = require('../middleware/validate');
 
 const router = express.Router();
@@ -94,7 +93,6 @@ router.post(
   '/:projectId/tasks',
   checkProjectAccess,
   authorizeRoles('ADMIN', 'MANAGER'),
-  idempotency,
   taskCreateValidation,
   taskController.createTask
 );
